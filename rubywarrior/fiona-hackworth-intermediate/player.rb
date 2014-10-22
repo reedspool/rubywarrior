@@ -2,23 +2,46 @@ class Player
 
 	@@max_health = 20
 	@@dirs = [ :forward, :left, :backward, :right  ]
+	@@freeze_all_first = true;
 
   def play_turn(warrior)
-
+puts  		warrior.feel(:forward).methods
   	stairs = warrior.direction_of_stairs
 
-  	danger = @@dirs.reduce(false) do |memo, dir|
-  		
-  		bad = warrior.feel(dir).enemy? && dir
+		carry = Proc.new { |memo, a| a || memo }
+		sum = Proc.new { |memo, a| (a ? 1 : 0) + memo }
 
-  		bad || memo
-  	end
+		danger_map = @@dirs.map { |dir| 
+			warrior.feel(dir).enemy? && dir 
+		}
 
-  	should_really_rest = warrior.health < @@max_health
+  	where_is_danger = danger_map.reduce &carry
 
-  	warrior.attack!(danger) && return if danger
+  	num_dangers = danger_map.reduce(0, &sum)
 
-  	warrior.rest! && return if should_really_rest
+		captive_map = @@dirs.map { |dir| 
+			warrior.feel(dir).captive? && dir 
+		}
+
+		num_captives = captive_map.reduce(0, &sum)
+
+  	where_is_captive = captive_map.reduce &carry
+
+  	unfilled = warrior.health < @@max_health
+
+  	freezing = @@freeze_all_first && num_dangers > 0 
+
+  	defend = warrior.health < @@max_health && num_dangers > 0 
+
+		return(warrior.bind!(where_is_danger)) if freezing
+
+		@@freeze_all_first = false;
+
+		return(warrior.attack!(where_is_danger)) if where_is_danger
+
+		return(warrior.rest!) if unfilled
+
+		return(warrior.rescue!(where_is_captive)) if where_is_captive
 
   	warrior.walk! stairs
   end
