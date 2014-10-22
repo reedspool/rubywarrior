@@ -2,6 +2,7 @@ class Player
 
 	@@max_health = 20
 	@@dirs = [ :forward, :left, :backward, :right  ]
+	@@freeze_all_first = true
 
   def play_turn(warrior)
 
@@ -49,6 +50,27 @@ class Player
 		num_captives = captive_space_map.reduce(0, &sum)
 
   	unfilled = warrior.health < @@max_health
+  	
+  	freeze = @@freeze_all_first && num_dangers > 0 
+
+  	# Begin strategy
+
+  	if @@freeze_all_first
+  		if num_dangers > 0		
+				return(warrior.bind!(touching_danger)) if touching_danger
+
+				dir = warrior.direction_of(danger_spaces.first)
+
+				if dir == stairs
+					return(warrior.walk!(empty))
+				end
+
+				return(warrior.walk!(warrior.direction_of(danger_spaces.first)))
+			end
+
+			@@freeze_all_first = false;
+  		return
+  	end
 
 puts num_dangers
   	# Begin strategy
