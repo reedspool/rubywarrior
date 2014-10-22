@@ -14,6 +14,12 @@ class Player
 		sum = Proc.new { |memo, a| (a ? 1 : 0) + memo }
 		identity = Proc.new { |a| a }
 
+  	empty_map = @@dirs.map { |dir|
+  		warrior.feel(dir).empty? && dir
+  	}
+
+  	empty = empty_map.reduce &carry
+
 		danger_space_map = units.map { |space| 
 			space.enemy? && space 
 		}
@@ -44,8 +50,8 @@ class Player
 
   	unfilled = warrior.health < @@max_health
 
+puts num_dangers
   	# Begin strategy
-
 		return(warrior.attack!(touching_danger)) if touching_danger
 
 		return(warrior.rest!) if unfilled
@@ -53,13 +59,24 @@ class Player
 		if num_captives > 0
 			return(warrior.rescue!(touching_captive)) if touching_captive
 
+			dir = warrior.direction_of(captive_spaces.first)
+
+			if dir == stairs
+				return(warrior.walk!(empty))
+			end
+
 			return(warrior.walk!(warrior.direction_of(captive_spaces.first)))
 		end
-
 		if num_dangers > 0		
 			return(warrior.bind!(touching_danger)) if touching_danger
 
-			return(warrior.walk!(warrior.direction_of(danger_spaces.first)))
+			dir = warrior.direction_of(danger_spaces.first)
+
+			if dir == stairs
+				return(warrior.walk!(empty))
+			end
+
+			return(warrior.walk!(dir))
 		end
 
   	warrior.walk! stairs
