@@ -5,7 +5,7 @@ class Player
 	@@freeze_all_first = true;
 
   def play_turn(warrior)
-puts  		warrior.feel(:forward).methods
+
   	stairs = warrior.direction_of_stairs
 
 		carry = Proc.new { |memo, a| a || memo }
@@ -27,11 +27,9 @@ puts  		warrior.feel(:forward).methods
 
   	where_is_captive = captive_map.reduce &carry
 
-  	unfilled = warrior.health < @@max_health
+  	unfilled = warrior.health < @@max_health / 2
 
   	freezing = @@freeze_all_first && num_dangers > 0 
-
-  	defend = warrior.health < @@max_health && num_dangers > 0 
 
 		return(warrior.bind!(where_is_danger)) if freezing
 
