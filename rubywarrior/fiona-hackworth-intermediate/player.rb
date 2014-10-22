@@ -1,8 +1,9 @@
 class Player
 
 	@@max_health = 20
-	@@dirs = [ :forward, :left, :backward, :right  ]
+	@@dirs = [ :forward, :left, :backward, :right  ].reverse
 	@@freeze_all_first = true
+	@@saving_captives_first = true
 
   def play_turn(warrior)
 
@@ -47,13 +48,32 @@ class Player
 
 		captive_spaces = captive_space_map.select(&identity)
 
+		captive_to_save_map = captive_spaces.map { |space|
+			space.ticking? && space
+		}
+
+		captive_to_save = captive_to_save_map.select(&identity)
+
 		num_captives = captive_space_map.reduce(0, &sum)
 
   	unfilled = warrior.health < @@max_health
-  	
-  	freeze = @@freeze_all_first && num_dangers > 0 
 
   	# Begin strategy
+  	if @@saving_captives_first
+			unless captive_to_save.empty?
+				return(warrior.rescue!(touching_captive)) if touching_captive
+
+				dir = warrior.direction_of(captive_to_save.first)
+
+				unless warrior.feel(dir).empty?
+					return(warrior.walk!(empty))
+				end
+
+				return warrior.walk!(dir)
+			end
+
+			@@saving_captives_first = false;
+  	end
 
   	if @@freeze_all_first
   		if num_dangers > 0		
@@ -65,15 +85,12 @@ class Player
 					return(warrior.walk!(empty))
 				end
 
-				return(warrior.walk!(warrior.direction_of(danger_spaces.first)))
+				return warrior.walk!(dir)
 			end
 
 			@@freeze_all_first = false;
-  		return
   	end
 
-puts num_dangers
-  	# Begin strategy
 		return(warrior.attack!(touching_danger)) if touching_danger
 
 		return(warrior.rest!) if unfilled
@@ -89,6 +106,7 @@ puts num_dangers
 
 			return(warrior.walk!(warrior.direction_of(captive_spaces.first)))
 		end
+
 		if num_dangers > 0		
 			return(warrior.bind!(touching_danger)) if touching_danger
 
