@@ -2,44 +2,78 @@ class Player
 
 	@@max_health = 20
 	@@dirs = [ :forward, :left, :backward, :right  ]
-	@@freeze_all_first = true;
+	@@freeze_all_first = false;
+
+	def walk_towards(warrior, space)
+		warrior.walk!(warrior.direction_of(warrior.listen.first))
+	end
 
   def play_turn(warrior)
 
+  	# Begin intense scanning
+
   	stairs = warrior.direction_of_stairs
+  	units = warrior.listen
 
 		carry = Proc.new { |memo, a| a || memo }
 		sum = Proc.new { |memo, a| (a ? 1 : 0) + memo }
+		identity = Proc.new { |a| a }
+
+		danger_space_map = units.map { |space| 
+			space.enemy? && space 
+		}
 
 		danger_map = @@dirs.map { |dir| 
 			warrior.feel(dir).enemy? && dir 
 		}
 
-  	where_is_danger = danger_map.reduce &carry
+		touching_danger = danger_map.reduce &carry
 
-  	num_dangers = danger_map.reduce(0, &sum)
+  	danger_spaces = danger_space_map.select(&identity)
 
+		num_dangers = danger_space_map.reduce(0, &sum)
+
+		captive_space_map = units.map { |space| 
+			space.captive? && space 
+		}
+		
 		captive_map = @@dirs.map { |dir| 
 			warrior.feel(dir).captive? && dir 
 		}
 
-		num_captives = captive_map.reduce(0, &sum)
+		touching_captive = captive_map.reduce &carry
 
-  	where_is_captive = captive_map.reduce &carry
+		captive_spaces = captive_space_map.select(&identity)
 
-  	unfilled = warrior.health < @@max_health / 2
+		num_captives = captive_space_map.reduce(0, &sum)
 
-  	freezing = @@freeze_all_first && num_dangers > 0 
+  	unfilled = warrior.health < @@max_health
 
-		return(warrior.bind!(where_is_danger)) if freezing
+  	freeze = @@freeze_all_first && num_dangers > 0 
 
-		@@freeze_all_first = false;
 
-		return(warrior.attack!(where_is_danger)) if where_is_danger
+  	# Begin strategy
+
+  	if @@freeze_all_first
+  		if num_dangers > 0		
+				return(warrior.bind!(touching_danger)) if touching_danger
+
+				return(warrior.walk!(warrior.direction_of(danger_spaces.first)))
+			end
+
+			@@freeze_all_first = false;
+  		return
+  	end
+
+		return(warrior.attack!(touching_danger)) if touching_danger
 
 		return(warrior.rest!) if unfilled
 
-		return(warrior.rescue!(where_is_captive)) if where_is_captive
+		if num_captives > 0
+			return(warrior.rescue!(touching_captive)) if touching_captive
+puts "hi"
+			return(warrior.walk!(warrior.direction_of(captive_spaces.first)))
+		end
 
   	warrior.walk! stairs
   end
